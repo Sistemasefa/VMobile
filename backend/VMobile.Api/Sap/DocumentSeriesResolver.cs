@@ -3,6 +3,7 @@ namespace VMobile.Api.Sap;
 /// <summary>
 /// Resolve a commercial series from the existing serieDelibery mapping,
 /// then map it to SAP's distinct NNM1 Series IDs per document type.
+/// Matches CardCode + Route + AddressId; retains AddressId2 in source rows for audit.
 /// Does not assume that the credit-note series has the same name.
 /// </summary>
 public static class DocumentSeriesResolver
@@ -21,8 +22,7 @@ public static class DocumentSeriesResolver
         var candidates = mappings.Where(m =>
             Eq(m.CardCode, selection.CardCode) &&
             Eq(m.Route, selection.Route) &&
-            Eq(m.AddressId, selection.AddressId) &&
-            (!selection.AddressId2.HasValue || m.AddressId2 == selection.AddressId2.Value))
+            Eq(m.AddressId, selection.AddressId))
             .ToArray();
 
         if (candidates.Length != 1)
@@ -60,7 +60,7 @@ public static class DocumentSeriesResolver
 }
 
 public sealed record SeriesSelection(
-    string CardCode, string Route, string AddressId, int? AddressId2);
+    string CardCode, string Route, string AddressId);
 
 public sealed record SerieDeliberyRow(
     string CardCode, string Route, string SeriesName, string AddressId, int? AddressId2);
