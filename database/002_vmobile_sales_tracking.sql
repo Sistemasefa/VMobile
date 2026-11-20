@@ -10,7 +10,7 @@ GO
 IF OBJECT_ID(N'dbo.VM_RouteTicketCounters',N'U') IS NULL
 BEGIN
  CREATE TABLE dbo.VM_RouteTicketCounters(
-   RouteCode nvarchar(30) NOT NULL CONSTRAINT PK_VM_RouteTicketCounters PRIMARY KEY,
+   RouteCode nvarchar(30) NOT NULL CONSTRAINT PK_VM_RouteTicketCounters PRIMARY KEY REFERENCES dbo.VM_Routes(RouteCode),
    LastTicket bigint NOT NULL CONSTRAINT DF_VM_RouteTicketCounters_LastTicket DEFAULT (0),
    CONSTRAINT CK_VM_RouteTicketCounters_LastTicket CHECK(LastTicket >= 0)
  );
@@ -22,7 +22,7 @@ BEGIN
  CREATE TABLE dbo.VM_Sales(
    SaleId uniqueidentifier NOT NULL CONSTRAINT PK_VM_Sales PRIMARY KEY,
    ClientSaleId uniqueidentifier NOT NULL,
-   RouteCode nvarchar(30) NOT NULL,
+   RouteCode nvarchar(30) NOT NULL REFERENCES dbo.VM_Routes(RouteCode),
    TicketNumber bigint NOT NULL,
    CardCode nvarchar(30) NOT NULL,
    CustomerRfc nvarchar(20) NULL,
@@ -32,6 +32,7 @@ BEGIN
    UpdatedAtUtc datetime2(3) NOT NULL CONSTRAINT DF_VM_Sales_Updated DEFAULT SYSUTCDATETIME(),
    CONSTRAINT UQ_VM_Sales_ClientSaleId UNIQUE(ClientSaleId),
    CONSTRAINT UQ_VM_Sales_RouteTicket UNIQUE(RouteCode,TicketNumber),
+   CONSTRAINT UQ_VM_Sales_ReferenceSap UNIQUE(ReferenceSap),
    CONSTRAINT CK_VM_Sales_Ticket CHECK(TicketNumber > 0),
    CONSTRAINT CK_VM_Sales_Status CHECK(Status IN(N'PENDIENTE',N'VALIDANDO',N'INCIDENCIA',N'PARCIAL',N'SINCRONIZADA'))
  );
@@ -95,6 +96,8 @@ BEGIN
  SET NOCOUNT ON;
  SET XACT_ABORT ON;
  IF NULLIF(LTRIM(RTRIM(@RouteCode)),N'') IS NULL THROW 51000,'RouteCode obligatorio',1;
+ IF NOT EXISTS(SELECT 1 FROM dbo.VM_Routes WHERE RouteCode = UPPER(LTRIM(RTRIM(@RouteCode))) AND IsActive = 1)
+     THROW 51001,'Ruta inexistente o inactiva',1;
  SET @RouteCode = UPPER(LTRIM(RTRIM(@RouteCode)));
  BEGIN TRANSACTION;
  UPDATE dbo.VM_RouteTicketCounters WITH (UPDLOCK, HOLDLOCK)
