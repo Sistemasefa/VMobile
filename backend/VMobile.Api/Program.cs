@@ -1,3 +1,4 @@
+using VMobile.Api.Services;
 using System.Net.Http.Json;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpClient<SapServiceLayerClient>((sp, http) => {
@@ -7,7 +8,14 @@ builder.Services.AddHttpClient<SapServiceLayerClient>((sp, http) => {
     http.BaseAddress = new Uri(url.TrimEnd('/') + "/");
     http.Timeout = TimeSpan.FromSeconds(30);
 });
+builder.Services.AddScoped<RouteAuth>();
 var app = builder.Build();
+app.MapPost("/api/auth/login", (LoginRequest input, RouteAuth auth, CancellationToken ct) => auth.Login(input, ct));
+app.MapPost("/api/auth/logout", (HttpRequest request, RouteAuth auth, CancellationToken ct) => auth.Logout(request, ct));
+app.MapGet("/api/auth/me", async (HttpRequest request, RouteAuth auth, CancellationToken ct) => {
+    var user = await auth.Resolve(request, ct);
+    return user is null ? Results.Unauthorized() : Results.Ok(user);
+});
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "VMobile" }));
 if (app.Environment.IsDevelopment())
     app.MapGet("/dev/sap-login-check", async (SapServiceLayerClient sap, CancellationToken ct) => {
