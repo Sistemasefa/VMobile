@@ -1,5 +1,12 @@
 using VMobile.Api.Services;
 using System.Net.Http.Json;
+if (args.Length > 0 && args[0] == "--set-password")
+{
+    if (args.Length != 2) { Console.Error.WriteLine("Uso: --set-password usuario"); Environment.ExitCode=1; return; }
+    var adminBuilder = WebApplication.CreateBuilder(Array.Empty<string>());
+    Environment.ExitCode = await PasswordAdmin.Run(adminBuilder.Configuration,args[1]);
+    return;
+}
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpClient<SapServiceLayerClient>((sp, http) => {
     var url = sp.GetRequiredService<IConfiguration>()["Sap:BaseUrl"] ?? throw new InvalidOperationException("Missing SAP URL");
